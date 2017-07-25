@@ -2,6 +2,9 @@
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.TreeSet;
@@ -17,15 +20,16 @@ import org.xml.sax.SAXException;
 import org.xml.sax.SAXParseException;
 import org.xml.sax.helpers.DefaultHandler;
 
+
 public class Aufgabe1 {
     Set<String> chLastNames;
-    Set<String> chFirstNames;
+    Map<String, Set<String>> variations;
+    int nameCount, chineseNameCount; 
 
     private class ConfigHandler extends DefaultHandler {
 
         private String value;
         private boolean insideName = false;
-        private boolean isChName = false;
 
         public void setDocumentLocator(Locator locator) {
         }
@@ -34,6 +38,7 @@ public class Aufgabe1 {
                                  String rawName, Attributes atts) throws SAXException {
             if (rawName.equals("author") || rawName.equals("editor")) {
                 insideName = true;
+                nameCount++;
                 value = "";
             }
         }
@@ -41,20 +46,47 @@ public class Aufgabe1 {
         public void endElement(String namespaceURI, String localName,
                                String rawName) throws SAXException {
 
-            if (!rawName.equals("author") && !rawName.equals("editor"))
+            if (!rawName.equals("author") && !rawName.equals("editor")){
                 return;
+            }
+            
             insideName = false;
-            if(isChName) {
-                System.out.println("chinese Name: " + value);
-                StringTokenizer st = new StringTokenizer(value, " ");
-                char c = st.nextToken().charAt(0);
-                while (st.hasMoreTokens()) {
-                    if (st.nextToken().charAt(0) != c + 1)
-                        return;
-                    c++;
-                }
-                chFirstNames.add(value);
-                isChName = false;
+            String[] names = value.split(" ");					//teile in vor und nachnamen
+            int lastIndex = names.length-1;
+            //teste, ob hinter dem Nachnamen ein Zahl-suffix steht, falls ja, setze den lastIndex auf den String des Nachnamens
+            while(names[lastIndex].chars().allMatch( Character::isDigit )){
+            	lastIndex--;
+            }
+            if (!chLastNames.contains(names[lastIndex])){	//prüfe ob der nachname ein chinesischer ist
+            	return;
+            }
+            chineseNameCount++;
+            /*
+             * erstelle für jeden Namen ein "standardisierten" Namen, welcher zusammen geschrieben wird.
+             * so wird z.B. A-B, A-b, A B, A b, Ab zu ab.
+             * Setze danach den Nachnamen mit Leerzeichen hinter den Vornamen.
+             * Mithilfe des standardisierten Namens werden spätere Vorkommen auf Gleichheit überprüft
+             */
+            String nameVariation = "";
+            String stName = "";
+            for(int i = 0; i < lastIndex; i++){	
+            	if(i > 0){			//durch das Splitten werden Leerzeichen entfernt, welche jedoch für die Variation wichtig sind -> Füge neue hinzu
+            		nameVariation += " " + names[i];
+            	} else {
+            		nameVariation = names[i];
+            	}
+            	stName += names[i];	//lasse sie beim standardisierten Namen weg.
+            }
+          //entferne Bindestriche, setze alles auf Kleinbuchstaben und füge Nachnamen hinzu
+            stName = stName.replace("-", "").toLowerCase() + " " + names[lastIndex].toLowerCase(); 	
+            
+            //füge die Ergebnisse zur Map hinzu
+            if(variations.containsKey(stName)){
+            	variations.get(stName).add(nameVariation);
+            } else {
+            	Set<String> set = new TreeSet<String>();
+            	set.add(nameVariation);
+            	variations.put(stName, set);
             }
         }
 
@@ -63,9 +95,6 @@ public class Aufgabe1 {
 
             if (insideName) {
                 String name = new String(ch, start, length);
-                if(chLastNames.contains(name)){
-                    isChName = true;
-                }
                 value += name;
             }
 
@@ -97,12 +126,29 @@ public class Aufgabe1 {
     }
 
     void print_result() {
-        for (String name: chFirstNames) {
-            System.out.println(name);
-        }
+    	int resultCount = 0;
+    	int maxVariations = 0;
+    	String maxVariationsName = "";
+    	
+    	for (Entry<String, Set<String>> entry : variations.entrySet()){
+    		int size = entry.getValue().size();
+    		if(size > 1){
+    			System.out.println(entry.getKey() + "\t\t variations: " + entry.getValue());
+    			if(size > maxVariations){
+    				maxVariations = size;
+    				maxVariationsName = entry.getKey();
+    			}
+    			resultCount++;
+    		}
+    	}
+    	StringBuilder sb = new StringBuilder();
+    	sb.append("There are ").append(resultCount).append(" chinese names with different variations\n");
+    	sb.append("(one of) The name(s) with the most variations is ").append(maxVariationsName).append(variations.get(maxVariationsName)).append(" with ").append(maxVariations).append(" variations");
+    	System.out.println(sb);
     }
 
     Aufgabe1(String dblpXmlFileName) {
+    	nameCount = chineseNameCount = 0;
         String[] chArray = { "Wang", "Chen", "Li", "Chang", "Liu", "Yang", "Huang", "Wu",
                 "Lin", "Chou", "Yeh", "Chao", "Lu", "Hsu", "Sun", "Chu", "Kao",
                 "Ma", "Liang", "Kuo", "He", "Cheng", "Hu", "Tsai", "Tseng", "Wong",
@@ -117,8 +163,10 @@ public class Aufgabe1 {
         for(int i = 0; i < chArray.length; i++) {
             chLastNames.add(chArray[i]);
         }
-
-        chFirstNames = new TreeSet<String>();
+        /*
+         * init map
+         */
+        variations = new HashMap<String, Set<String>>();
         try {
             SAXParserFactory parserFactory = SAXParserFactory.newInstance();
             SAXParser parser = parserFactory.newSAXParser();
