@@ -54,11 +54,12 @@ public class Aufgabe2 {
 			} else {
 				if (rawName.equals("article")) {
 					insideArticle = true;
+					keyValue = atts.getValue("key").split("/")[1];
 				} else if (rawName.equals("proceedings")) {
 					insideJournal = true;
+					keyValue = atts.getValue("key").split("/")[1];
 				}
 
-				keyValue = atts.getValue("key").split("/")[1];
 			}
 		}
 
@@ -130,7 +131,7 @@ public class Aufgabe2 {
 		for (Entry<String, Set<String>> entry : variations.entrySet()) {
 			int size = entry.getValue().size();
 			if (size > 1) {
-				System.out.println(entry.getKey() + "\t\t variations: " + entry.getValue());
+				System.out.println(entry.getKey() + "\t\t variations: " + entry.getValue() + "\r\n");
 				if (size > maxVariations) {
 					maxVariations = size;
 					maxVariationsName = entry.getKey();
@@ -139,8 +140,8 @@ public class Aufgabe2 {
 			}
 		}
 		StringBuilder sb = new StringBuilder();
-		sb.append("There are ").append(resultCount).append(" journals/proceeding names with different variations\n");
-		sb.append("The name with the most variations is ").append(maxVariationsName)
+		sb.append("\nThere are ").append(resultCount).append(" journals/proceeding names with different variations\n");
+		sb.append("\nThe name with the most variations is ").append(maxVariationsName)
 				.append(variations.get(maxVariationsName)).append(" with ").append(maxVariations).append(" variations");
 		System.out.println(sb);
 	}
@@ -148,7 +149,7 @@ public class Aufgabe2 {
 	Aufgabe2(String dblpXmlFileName) {
 
 		variations = new HashMap<String, Set<String>>();
-		System.out.println(Paths.get("").toAbsolutePath());
+//		System.out.println(Paths.get("").toAbsolutePath());
 
 		try {
 			SAXParserFactory parserFactory = SAXParserFactory.newInstance();
@@ -176,6 +177,6 @@ public class Aufgabe2 {
 			System.exit(0);
 		}
 
-		new Aufgabe1(args[0]);
+		new Aufgabe2(args[0]);
 	}
 }
